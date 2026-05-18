@@ -59,7 +59,7 @@ const slug = Astro.params.slug ?? '';
 	</head>
 	<body>
 		<Header />
-		<main>
+		<main data-slug={slug}>
 			<article id="blog-article" hidden>
 				<div id="blog-hero" class="hero-image"></div>
 				<div class="prose">
@@ -76,8 +76,11 @@ const slug = Astro.params.slug ?? '';
 			<p id="blog-status" class="blog-status">Loading post…</p>
 		</main>
 		<Footer />
-		<script define:vars={{ slug }}>
+		<script>
 			import { fetchBlogPost, formatPostDate } from '../../lib/blog.ts';
+
+			const mainEl = document.querySelector('main[data-slug]');
+			const slug = mainEl?.dataset.slug ?? '';
 
 			const statusEl = document.getElementById('blog-status');
 			const articleEl = document.getElementById('blog-article');
@@ -91,35 +94,38 @@ const slug = Astro.params.slug ?? '';
 			}
 
 			try {
+				if (!slug) {
+					throw new Error('Post not found.');
+				}
+
 				const post = await fetchBlogPost(slug);
 
 				if (!post) {
-					statusEl.textContent = 'Post not found.';
-					statusEl.classList.add('blog-status--error');
-				} else {
-					document.title = post.title;
-					const descriptionMeta = document.querySelector('meta[name="description"]');
-					if (descriptionMeta) descriptionMeta.setAttribute('content', post.description);
-
-					if (post.heroImage) {
-						const img = document.createElement('img');
-						img.src = post.heroImage;
-						img.width = 1020;
-						img.height = 510;
-						img.alt = '';
-						heroEl.append(img);
-					} else {
-						heroEl.remove();
-					}
-
-					dateEl.dateTime = post.pubDate.toISOString();
-					dateEl.textContent = formatPostDate(post.pubDate);
-					titleEl.textContent = post.title;
-					contentEl.innerHTML = post.contentHtml;
-
-					statusEl.remove();
-					articleEl.hidden = false;
+					throw new Error('Post not found.');
 				}
+
+				document.title = post.title;
+				const descriptionMeta = document.querySelector('meta[name="description"]');
+				if (descriptionMeta) descriptionMeta.setAttribute('content', post.description);
+
+				if (post.heroImage) {
+					const img = document.createElement('img');
+					img.src = post.heroImage;
+					img.width = 1020;
+					img.height = 510;
+					img.alt = '';
+					heroEl.append(img);
+				} else {
+					heroEl.remove();
+				}
+
+				dateEl.dateTime = post.pubDate.toISOString();
+				dateEl.textContent = formatPostDate(post.pubDate);
+				titleEl.textContent = post.title;
+				contentEl.innerHTML = post.contentHtml;
+
+				statusEl.remove();
+				articleEl.hidden = false;
 			} catch (error) {
 				statusEl.textContent = error instanceof Error ? error.message : 'Failed to load post.';
 				statusEl.classList.add('blog-status--error');
