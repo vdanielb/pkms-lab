@@ -1,5 +1,8 @@
 # build output
 dist/
+
+# wrangler local state (OS-specific paths; never commit)
+.wrangler/
 # generated types
 .astro/
 
