@@ -1,0 +1,27 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>Google Sheets as a CMS Demo</h1>
+			<p>
+				This is a demo of a no-code method of changing website content using <b>Google Sheets</b>.
+			</p>
+			<p>
+				You update the Google Sheets <a href=/blog>here</a>, and see your changes appear <a href="https://docs.google.com/spreadsheets/d/1d1jVt9GeGRQT0VSVA75gqeRG3laeMUQcJz5d75ytHIo/edit?usp=sharing" target=_blank>here</a> after 1 or 2 minutes.
+			</p>
+		
+		</main>
+		<Footer />
+	</body>
+</html>
