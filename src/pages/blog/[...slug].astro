@@ -1,20 +1,129 @@
 ---
-import { type CollectionEntry, getCollection, render } from 'astro:content';
-import BlogPost from '../../layouts/BlogPost.astro';
+export const prerender = false;
 
-export async function getStaticPaths() {
-	const posts = await getCollection('blog');
-	return posts.map((post) => ({
-		params: { slug: post.id },
-		props: post,
-	}));
-}
-type Props = CollectionEntry<'blog'>;
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 
-const post = Astro.props;
-const { Content } = await render(post);
+const slug = Astro.params.slug ?? '';
 ---
 
-<BlogPost {...post.data}>
-	<Content />
-</BlogPost>
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+		<style>
+			main {
+				width: calc(100% - 2em);
+				max-width: 100%;
+				margin: 0;
+			}
+			.hero-image {
+				width: 100%;
+			}
+			.hero-image img {
+				display: block;
+				margin: 0 auto;
+				border-radius: 12px;
+				box-shadow: var(--box-shadow);
+			}
+			.prose {
+				width: 720px;
+				max-width: calc(100% - 2em);
+				margin: auto;
+				padding: 1em;
+				color: rgb(var(--gray-dark));
+			}
+			.title {
+				margin-bottom: 1em;
+				padding: 1em 0;
+				text-align: center;
+				line-height: 1;
+			}
+			.title h1 {
+				margin: 0 0 0.5em 0;
+			}
+			.date {
+				margin-bottom: 0.5em;
+				color: rgb(var(--gray));
+			}
+			.blog-status {
+				text-align: center;
+				color: rgb(var(--gray));
+			}
+			.blog-status--error {
+				color: #b42318;
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<article id="blog-article" hidden>
+				<div id="blog-hero" class="hero-image"></div>
+				<div class="prose">
+					<div class="title">
+						<div class="date">
+							<time id="blog-date"></time>
+						</div>
+						<h1 id="blog-title"></h1>
+						<hr />
+					</div>
+					<div id="blog-content"></div>
+				</div>
+			</article>
+			<p id="blog-status" class="blog-status">Loading post…</p>
+		</main>
+		<Footer />
+		<script define:vars={{ slug }}>
+			import { fetchBlogPost, formatPostDate } from '../../lib/blog.ts';
+
+			const statusEl = document.getElementById('blog-status');
+			const articleEl = document.getElementById('blog-article');
+			const heroEl = document.getElementById('blog-hero');
+			const dateEl = document.getElementById('blog-date');
+			const titleEl = document.getElementById('blog-title');
+			const contentEl = document.getElementById('blog-content');
+
+			if (!statusEl || !articleEl || !heroEl || !dateEl || !titleEl || !contentEl) {
+				throw new Error('Blog post elements not found');
+			}
+
+			try {
+				const post = await fetchBlogPost(slug);
+
+				if (!post) {
+					statusEl.textContent = 'Post not found.';
+					statusEl.classList.add('blog-status--error');
+				} else {
+					document.title = post.title;
+					const descriptionMeta = document.querySelector('meta[name="description"]');
+					if (descriptionMeta) descriptionMeta.setAttribute('content', post.description);
+
+					if (post.heroImage) {
+						const img = document.createElement('img');
+						img.src = post.heroImage;
+						img.width = 1020;
+						img.height = 510;
+						img.alt = '';
+						heroEl.append(img);
+					} else {
+						heroEl.remove();
+					}
+
+					dateEl.dateTime = post.pubDate.toISOString();
+					dateEl.textContent = formatPostDate(post.pubDate);
+					titleEl.textContent = post.title;
+					contentEl.innerHTML = post.contentHtml;
+
+					statusEl.remove();
+					articleEl.hidden = false;
+				}
+			} catch (error) {
+				statusEl.textContent = error instanceof Error ? error.message : 'Failed to load post.';
+				statusEl.classList.add('blog-status--error');
+			}
+		</script>
+	</body>
+</html>

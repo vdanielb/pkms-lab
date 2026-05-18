@@ -1,14 +1,8 @@
 ---
-import { getCollection } from 'astro:content';
 import BaseHead from '../../components/BaseHead.astro';
 import Footer from '../../components/Footer.astro';
-import FormattedDate from '../../components/FormattedDate.astro';
 import Header from '../../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
-
-const posts = (await getCollection('blog')).sort(
-	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-);
 ---
 
 <!doctype html>
@@ -68,6 +62,12 @@ const posts = (await getCollection('blog')).sort(
 			ul a:hover img {
 				box-shadow: var(--box-shadow);
 			}
+			.blog-status {
+				color: rgb(var(--gray));
+			}
+			.blog-status--error {
+				color: #b42318;
+			}
 			@media (max-width: 720px) {
 				ul {
 					gap: 0.5em;
@@ -89,25 +89,63 @@ const posts = (await getCollection('blog')).sort(
 		<Header />
 		<main>
 			<section>
-				<ul>
-					{
-						posts.map((post) => (
-							<li>
-								<a href={`/blog/${post.id}/`}>
-									{post.data.heroImage && (
-										<img width={720} height={360} src={post.data.heroImage} alt="" />
-									)}
-									<h4 class="title">{post.data.title}</h4>
-									<p class="date">
-										<FormattedDate date={post.data.pubDate} />
-									</p>
-								</a>
-							</li>
-						))
-					}
-				</ul>
+				<p id="blog-status" class="blog-status">Loading posts…</p>
+				<ul id="blog-posts" hidden></ul>
 			</section>
 		</main>
 		<Footer />
+		<script>
+			import { fetchBlogPosts, formatPostDate } from '../../lib/blog.ts';
+
+			const statusEl = document.getElementById('blog-status');
+			const listEl = document.getElementById('blog-posts');
+
+			if (!statusEl || !listEl) throw new Error('Blog list elements not found');
+
+			try {
+				const posts = await fetchBlogPosts();
+
+				if (posts.length === 0) {
+					statusEl.textContent = 'No posts yet.';
+				} else {
+					statusEl.remove();
+					listEl.hidden = false;
+
+					for (const post of posts) {
+						const li = document.createElement('li');
+						const link = document.createElement('a');
+						link.href = `/blog/${post.id}/`;
+
+						if (post.heroImage) {
+							const img = document.createElement('img');
+							img.src = post.heroImage;
+							img.width = 720;
+							img.height = 360;
+							img.alt = '';
+							link.append(img);
+						}
+
+						const title = document.createElement('h4');
+						title.className = 'title';
+						title.textContent = post.title;
+
+						const date = document.createElement('p');
+						date.className = 'date';
+						const time = document.createElement('time');
+						time.dateTime = post.pubDate.toISOString();
+						time.textContent = formatPostDate(post.pubDate);
+						date.append(time);
+
+						link.append(title, date);
+						li.append(link);
+						listEl.append(li);
+					}
+				}
+			} catch (error) {
+				statusEl.textContent =
+					error instanceof Error ? error.message : 'Failed to load blog posts.';
+				statusEl.classList.add('blog-status--error');
+			}
+		</script>
 	</body>
 </html>
