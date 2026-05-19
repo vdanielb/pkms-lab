@@ -1,11 +1,12 @@
 ---
+export const prerender = false;
+
 import BaseHead from '../../components/BaseHead.astro';
 import BlogPostCard from '../../components/BlogPostCard.astro';
 import Footer from '../../components/Footer.astro';
 import Header from '../../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 import { fetchBlogPosts } from '../../lib/blog';
-import { serializePosts } from '../../lib/blog-cache';
 
 let posts: Awaited<ReturnType<typeof fetchBlogPosts>> = [];
 let error: string | null = null;
@@ -15,8 +16,6 @@ try {
 } catch (e) {
 	error = e instanceof Error ? e.message : 'Failed to load blog posts.';
 }
-
-const postsCache = posts.length > 0 ? serializePosts(posts) : [];
 ---
 
 <!doctype html>
@@ -75,16 +74,5 @@ const postsCache = posts.length > 0 ? serializePosts(posts) : [];
 			</section>
 		</main>
 		<Footer />
-		{
-			postsCache.length > 0 && (
-				<script define:vars={{ postsCache }}>
-					import { hydrateBlogCache } from '../../lib/blog.ts';
-					import { prefetchBlogRoutes } from '../../lib/blog-cache.ts';
-
-					hydrateBlogCache(postsCache);
-					prefetchBlogRoutes(postsCache.map((post) => post.id));
-				</script>
-			)
-		}
 	</body>
 </html>
