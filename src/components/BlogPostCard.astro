@@ -1,0 +1,100 @@
+---
+import FormattedDate from './FormattedDate.astro';
+import type { BlogPost } from '../lib/blog';
+
+type Props = Pick<BlogPost, 'id' | 'title' | 'description' | 'pubDate' | 'heroImage'> & {
+	featured?: boolean;
+};
+
+const { id, title, description, pubDate, heroImage, featured = false } = Astro.props;
+---
+
+<li class:list={['blog-post-card', { 'blog-post-card--featured': featured }]}>
+	<a class="blog-post-card__link" href={`/blog/${id}/`}>
+		{heroImage && <img width={720} height={360} src={heroImage} alt="" />}
+		<h4 class="blog-post-card__title">{title}</h4>
+		{description && <p class="blog-post-card__subtitle">{description}</p>}
+		<p class="blog-post-card__date">
+			<FormattedDate date={pubDate} />
+		</p>
+	</a>
+</li>
+
+<style>
+	.blog-post-card {
+		width: calc(50% - 1rem);
+	}
+
+	.blog-post-card--featured {
+		width: 100%;
+		margin-bottom: 1rem;
+		text-align: center;
+	}
+
+	.blog-post-card--featured img {
+		width: 100%;
+	}
+
+	.blog-post-card--featured .blog-post-card__title {
+		font-size: 2.369rem;
+	}
+
+	.blog-post-card__link {
+		display: block;
+		text-decoration: none;
+		color: inherit;
+		transition: color 0.2s ease;
+	}
+
+	.blog-post-card__link img {
+		margin-bottom: 0.5rem;
+		border-radius: 12px;
+		transition: box-shadow 0.2s ease;
+	}
+
+	.blog-post-card__link:hover img {
+		box-shadow: var(--box-shadow);
+	}
+
+	.blog-post-card__title {
+		margin: 0;
+		color: rgb(var(--black));
+		line-height: 1;
+		transition: color 0.2s ease;
+	}
+
+	.blog-post-card__subtitle {
+		margin: 0.35rem 0 0;
+		color: rgb(var(--gray));
+		line-height: 1.35;
+		font-size: 0.95rem;
+		transition: color 0.2s ease;
+	}
+
+	.blog-post-card__date {
+		margin: 0.35rem 0 0;
+		color: rgb(var(--gray));
+		transition: color 0.2s ease;
+	}
+
+	.blog-post-card__link:hover .blog-post-card__title,
+	.blog-post-card__link:hover .blog-post-card__subtitle,
+	.blog-post-card__link:hover .blog-post-card__date {
+		color: rgb(var(--accent));
+	}
+
+	@media (max-width: 720px) {
+		.blog-post-card {
+			width: 100%;
+			text-align: center;
+		}
+
+		.blog-post-card--featured {
+			margin-bottom: 0;
+		}
+
+		.blog-post-card--featured .blog-post-card__title {
+			font-size: 1.563em;
+		}
+	}
+</style>

@@ -1,8 +1,22 @@
 ---
 import BaseHead from '../../components/BaseHead.astro';
+import BlogPostCard from '../../components/BlogPostCard.astro';
 import Footer from '../../components/Footer.astro';
 import Header from '../../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { fetchBlogPosts } from '../../lib/blog';
+import { serializePosts } from '../../lib/blog-cache';
+
+let posts: Awaited<ReturnType<typeof fetchBlogPosts>> = [];
+let error: string | null = null;
+
+try {
+	posts = await fetchBlogPosts();
+} catch (e) {
+	error = e instanceof Error ? e.message : 'Failed to load blog posts.';
+}
+
+const postsCache = posts.length > 0 ? serializePosts(posts) : [];
 ---
 
 <!doctype html>
@@ -13,54 +27,13 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 			main {
 				width: 960px;
 			}
-			ul {
+			.blog-posts {
 				display: flex;
 				flex-wrap: wrap;
 				gap: 2rem;
 				list-style-type: none;
 				margin: 0;
 				padding: 0;
-			}
-			ul li {
-				width: calc(50% - 1rem);
-			}
-			ul li * {
-				text-decoration: none;
-				transition: 0.2s ease;
-			}
-			ul li:first-child {
-				width: 100%;
-				margin-bottom: 1rem;
-				text-align: center;
-			}
-			ul li:first-child img {
-				width: 100%;
-			}
-			ul li:first-child .title {
-				font-size: 2.369rem;
-			}
-			ul li img {
-				margin-bottom: 0.5rem;
-				border-radius: 12px;
-			}
-			ul li a {
-				display: block;
-			}
-			.title {
-				margin: 0;
-				color: rgb(var(--black));
-				line-height: 1;
-			}
-			.date {
-				margin: 0;
-				color: rgb(var(--gray));
-			}
-			ul li a:hover h4,
-			ul li a:hover .date {
-				color: rgb(var(--accent));
-			}
-			ul a:hover img {
-				box-shadow: var(--box-shadow);
 			}
 			.blog-status {
 				color: rgb(var(--gray));
@@ -69,18 +42,8 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 				color: #b42318;
 			}
 			@media (max-width: 720px) {
-				ul {
+				.blog-posts {
 					gap: 0.5em;
-				}
-				ul li {
-					width: 100%;
-					text-align: center;
-				}
-				ul li:first-child {
-					margin-bottom: 0;
-				}
-				ul li:first-child .title {
-					font-size: 1.563em;
 				}
 			}
 		</style>
@@ -89,63 +52,39 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 		<Header />
 		<main>
 			<section>
-				<p id="blog-status" class="blog-status">Loading posts…</p>
-				<ul id="blog-posts" hidden></ul>
+				{
+					error ? (
+						<p class="blog-status blog-status--error">{error}</p>
+					) : posts.length === 0 ? (
+						<p class="blog-status">No posts yet.</p>
+					) : (
+						<ul class="blog-posts">
+							{posts.map((post, index) => (
+								<BlogPostCard
+									id={post.id}
+									title={post.title}
+									description={post.description}
+									pubDate={post.pubDate}
+									heroImage={post.heroImage}
+									featured={index === 0}
+								/>
+							))}
+						</ul>
+					)
+				}
 			</section>
 		</main>
 		<Footer />
-		<script>
-			import { fetchBlogPosts, formatPostDate } from '../../lib/blog.ts';
+		{
+			postsCache.length > 0 && (
+				<script define:vars={{ postsCache }}>
+					import { hydrateBlogCache } from '../../lib/blog.ts';
+					import { prefetchBlogRoutes } from '../../lib/blog-cache.ts';
 
-			const statusEl = document.getElementById('blog-status');
-			const listEl = document.getElementById('blog-posts');
-
-			if (!statusEl || !listEl) throw new Error('Blog list elements not found');
-
-			try {
-				const posts = await fetchBlogPosts();
-
-				if (posts.length === 0) {
-					statusEl.textContent = 'No posts yet.';
-				} else {
-					statusEl.remove();
-					listEl.hidden = false;
-
-					for (const post of posts) {
-						const li = document.createElement('li');
-						const link = document.createElement('a');
-						link.href = `/blog/${post.id}/`;
-
-						if (post.heroImage) {
-							const img = document.createElement('img');
-							img.src = post.heroImage;
-							img.width = 720;
-							img.height = 360;
-							img.alt = '';
-							link.append(img);
-						}
-
-						const title = document.createElement('h4');
-						title.className = 'title';
-						title.textContent = post.title;
-
-						const date = document.createElement('p');
-						date.className = 'date';
-						const time = document.createElement('time');
-						time.dateTime = post.pubDate.toISOString();
-						time.textContent = formatPostDate(post.pubDate);
-						date.append(time);
-
-						link.append(title, date);
-						li.append(link);
-						listEl.append(li);
-					}
-				}
-			} catch (error) {
-				statusEl.textContent =
-					error instanceof Error ? error.message : 'Failed to load blog posts.';
-				statusEl.classList.add('blog-status--error');
-			}
-		</script>
+					hydrateBlogCache(postsCache);
+					prefetchBlogRoutes(postsCache.map((post) => post.id));
+				</script>
+			)
+		}
 	</body>
 </html>

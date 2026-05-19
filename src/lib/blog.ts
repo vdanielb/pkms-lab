@@ -1,4 +1,10 @@
 import { GOOGLE_SHEET_CSV_URL } from '../consts';
+import {
+	deserializePosts,
+	readSessionCache,
+	type SerializedBlogPost,
+	writeSessionCache,
+} from './blog-cache';
 import { parseCSV } from './csv';
 
 export type BlogPost = {
@@ -71,12 +77,47 @@ function rowsToPosts(rows: Record<string, string>[]): BlogPost[] {
 	return posts.sort((a, b) => b.pubDate.valueOf() - a.pubDate.valueOf());
 }
 
-export async function fetchBlogPosts(): Promise<BlogPost[]> {
+let memoryCache: BlogPost[] | null = null;
+
+function getCachedPosts(): BlogPost[] | null {
+	if (memoryCache) return memoryCache;
+	if (typeof window === 'undefined') return null;
+
+	const fromSession = readSessionCache();
+	if (fromSession) {
+		memoryCache = fromSession;
+		return fromSession;
+	}
+	return null;
+}
+
+function setCachedPosts(posts: BlogPost[]): void {
+	memoryCache = posts;
+	if (typeof window !== 'undefined') {
+		writeSessionCache(posts);
+	}
+}
+
+/** Seed the client cache from data already fetched on the blog index (SSR). */
+export function hydrateBlogCache(serialized: SerializedBlogPost[]): void {
+	setCachedPosts(deserializePosts(serialized));
+}
+
+async function fetchPostsFromNetwork(): Promise<BlogPost[]> {
 	const response = await fetch(GOOGLE_SHEET_CSV_URL);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch Google Sheet (${response.status} ${response.statusText})`);
 	}
 	return rowsToPosts(parseCSV(await response.text()));
+}
+
+export async function fetchBlogPosts(): Promise<BlogPost[]> {
+	const cached = getCachedPosts();
+	if (cached) return cached;
+
+	const posts = await fetchPostsFromNetwork();
+	setCachedPosts(posts);
+	return posts;
 }
 
 export async function fetchBlogPost(id: string): Promise<BlogPost | undefined> {

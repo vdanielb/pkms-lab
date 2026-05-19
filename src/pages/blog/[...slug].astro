@@ -44,6 +44,12 @@ const slug = Astro.params.slug ?? '';
 			.title h1 {
 				margin: 0 0 0.5em 0;
 			}
+			.subtitle {
+				margin: 0 0 0.75em;
+				color: rgb(var(--gray));
+				line-height: 1.4;
+				font-size: 1.1rem;
+			}
 			.date {
 				margin-bottom: 0.5em;
 				color: rgb(var(--gray));
@@ -68,6 +74,7 @@ const slug = Astro.params.slug ?? '';
 							<time id="blog-date"></time>
 						</div>
 						<h1 id="blog-title"></h1>
+						<p id="blog-subtitle" class="subtitle" hidden></p>
 						<hr />
 					</div>
 					<div id="blog-content"></div>
@@ -87,9 +94,10 @@ const slug = Astro.params.slug ?? '';
 			const heroEl = document.getElementById('blog-hero');
 			const dateEl = document.getElementById('blog-date');
 			const titleEl = document.getElementById('blog-title');
+			const subtitleEl = document.getElementById('blog-subtitle');
 			const contentEl = document.getElementById('blog-content');
 
-			if (!statusEl || !articleEl || !heroEl || !dateEl || !titleEl || !contentEl) {
+			if (!statusEl || !articleEl || !heroEl || !dateEl || !titleEl || !subtitleEl || !contentEl) {
 				throw new Error('Blog post elements not found');
 			}
 
@@ -122,6 +130,10 @@ const slug = Astro.params.slug ?? '';
 				dateEl.dateTime = post.pubDate.toISOString();
 				dateEl.textContent = formatPostDate(post.pubDate);
 				titleEl.textContent = post.title;
+				if (post.description) {
+					subtitleEl.textContent = post.description;
+					subtitleEl.hidden = false;
+				}
 				contentEl.innerHTML = post.contentHtml;
 
 				statusEl.remove();
